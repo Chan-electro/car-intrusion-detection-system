@@ -1,0 +1,11 @@
+paho-mqtt==2.1.0
+scikit-learn==1.4.2
+pandas==2.2.1
+numpy==1.26.4
+flask==3.0.3
+flask-socketio==5.3.6
+haversine==2.8.1
+joblib==1.4.0
+pytest==8.1.1
+gevent==24.2.1
+gevent-websocket==0.10.1

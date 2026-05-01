@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Car IDS — Monitoring Platform</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+
+    .pulse-green { animation: pulseGreen 2s infinite; }
+    @keyframes pulseGreen {
+      0%,100% { box-shadow: 0 0 0 0 rgba(34,197,94,0.4); }
+      50%     { box-shadow: 0 0 0 7px rgba(34,197,94,0); }
+    }
+
+    .pulse-red { animation: pulseRed 1s infinite; }
+    @keyframes pulseRed {
+      0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.5); }
+      50%     { box-shadow: 0 0 0 9px rgba(239,68,68,0); }
+    }
+
+    .log-entry { animation: slideDown 0.25s ease-out; }
+    @keyframes slideDown {
+      from { opacity:0; transform:translateY(-6px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+
+    .card-hover { transition: transform .2s ease, box-shadow .2s ease; }
+    .card-hover:hover { transform:translateY(-2px); box-shadow:0 12px 28px -6px rgba(0,0,0,.08); }
+
+    ::-webkit-scrollbar { width:5px; }
+    ::-webkit-scrollbar-track { background:#f8fafc; }
+    ::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:4px; }
+    ::-webkit-scrollbar-thumb:hover { background:#94a3b8; }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+
+  <!-- ── Navbar ──────────────────────────────────────────────── -->
+  <nav class="bg-slate-900 border-b border-slate-800 px-6 py-4 sticky top-0 z-50 shadow-lg">
+    <div class="max-w-screen-xl mx-auto flex items-center justify-between">
+
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center shadow-md">
+          <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6
+                 11.955 11.955 0 003 10c0 5.592 3.824 10.29 9 11.622
+                 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152
+                 c-3.196 0-6.1-1.249-8.25-3.286z"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-white font-bold text-base leading-none tracking-tight">Car IDS</h1>
+          <p class="text-slate-400 text-xs mt-0.5">Intrusion Detection System</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-4">
+        <div class="flex items-center gap-2">
+          <div class="w-2 h-2 rounded-full bg-green-400 pulse-green"></div>
+          <span class="text-slate-300 text-xs font-medium">Live</span>
+        </div>
+        <div id="nav-status"
+             class="px-3 py-1 rounded-full bg-green-500/10 border border-green-500/30
+                    text-green-400 text-xs font-semibold tracking-wide">
+          SYSTEM SAFE
+        </div>
+        <button onclick="resetAlerts()"
+                class="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-blue-600
+                       text-white text-xs font-semibold rounded-lg transition-all duration-200
+                       border border-slate-600 hover:border-blue-500 shadow-sm">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11
+                 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+          Reset Alerts
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ── Alert Banner ────────────────────────────────────────── -->
+  <div id="alert-banner" class="hidden bg-red-50 border-b-2 border-red-200 px-6 py-3">
+    <div class="max-w-screen-xl mx-auto flex items-center gap-3">
+      <svg class="w-4 h-4 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24"
+           stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71
+             c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5
+             -3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+      </svg>
+      <p id="alert-banner-text" class="text-red-700 font-semibold text-xs flex-1">
+        Intrusion detected
+      </p>
+      <button onclick="document.getElementById('alert-banner').classList.add('hidden')"
+              class="text-red-300 hover:text-red-600 transition-colors ml-auto">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Main ────────────────────────────────────────────────── -->
+  <main class="max-w-screen-xl mx-auto px-6 py-8">
+
+    <!-- Stat Cards -->
+    <div class="grid grid-cols-4 gap-5 mb-7">
+
+      <!-- Car Status -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm card-hover">
+        <div class="flex items-center justify-between mb-4">
+          <span class="text-slate-400 text-xs font-semibold uppercase tracking-widest">Car Status</span>
+          <div id="status-dot" class="w-2.5 h-2.5 rounded-full bg-green-500 pulse-green"></div>
+        </div>
+        <p id="car-status" class="text-3xl font-extrabold text-green-500 tracking-tight">SAFE</p>
+        <div class="mt-3 h-1 w-full rounded-full bg-slate-100 overflow-hidden">
+          <div id="status-bar" class="h-1 rounded-full bg-green-500 w-full transition-all duration-500"></div>
+        </div>
+      </div>
+
+      <!-- Speed -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm card-hover">
+        <div class="flex items-center justify-between mb-4">
+          <span class="text-slate-400 text-xs font-semibold uppercase tracking-widest">Speed (PWM)</span>
+          <svg class="w-4 h-4 text-blue-400" fill="none" viewBox="0 0 24 24"
+               stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+          </svg>
+        </div>
+        <p id="speed-val" class="text-3xl font-extrabold text-slate-800 tracking-tight">000</p>
+        <div class="mt-3">
+          <div class="h-1 w-full rounded-full bg-slate-100 overflow-hidden">
+            <div id="speed-bar" class="h-1 rounded-full bg-blue-500 transition-all duration-300"
+                 style="width:0%"></div>
+          </div>
+          <div class="flex justify-between mt-1.5">
+            <span class="text-xs text-slate-300">0</span>
+            <span class="text-xs text-slate-300">255</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Traffic Signal -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm card-hover">
+        <div class="flex items-center justify-between mb-4">
+          <span class="text-slate-400 text-xs font-semibold uppercase tracking-widest">Traffic Signal</span>
+          <svg class="w-4 h-4 text-slate-300" fill="none" viewBox="0 0 24 24"
+               stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504
+                 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125
+                 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125
+                 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0
+                 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0
+                 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125
+                 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0
+                 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0
+                 01-1.125-1.125V4.125z"/>
+          </svg>
+        </div>
+        <p id="traffic-val" class="text-3xl font-extrabold text-green-500 tracking-tight">GREEN</p>
+        <div class="mt-3 flex items-center gap-2">
+          <div id="traffic-dot" class="w-3 h-3 rounded-full bg-green-500 transition-colors duration-300"></div>
+          <span id="traffic-lbl" class="text-xs text-slate-400">All clear — proceeding</span>
+        </div>
+      </div>
+
+      <!-- Route Integrity -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm card-hover">
+        <div class="flex items-center justify-between mb-4">
+          <span class="text-slate-400 text-xs font-semibold uppercase tracking-widest">Route Integrity</span>
+          <svg class="w-4 h-4 text-slate-300" fill="none" viewBox="0 0 24 24"
+               stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19
+                 .622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869
+                 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0
+                 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0
+                 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159
+                 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z"/>
+          </svg>
+        </div>
+        <p id="route-val" class="text-3xl font-extrabold text-green-500 tracking-tight">OK</p>
+        <div class="mt-3 flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0
+                 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06
+                 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
+              clip-rule="evenodd"/>
+          </svg>
+          <span id="route-lbl" class="text-xs text-slate-400">Golden route verified</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Chart + System Status -->
+    <div class="grid grid-cols-3 gap-5 mb-7">
+
+      <div class="col-span-2 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+        <div class="flex items-center justify-between mb-5">
+          <div>
+            <h2 class="text-slate-800 font-bold text-sm">Speed History</h2>
+            <p class="text-slate-400 text-xs mt-0.5">Real-time PWM — last 60 readings</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="w-4 h-0.5 bg-blue-500 rounded-full"></div>
+            <span class="text-xs text-slate-400 font-medium">PWM Signal</span>
+          </div>
+        </div>
+        <canvas id="speedChart" height="110"></canvas>
+      </div>
+
+      <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+        <h2 class="text-slate-800 font-bold text-sm mb-4">System Status</h2>
+        <div class="divide-y divide-slate-50">
+          <div class="flex items-center justify-between py-2.5">
+            <span class="text-slate-500 text-xs">MQTT Broker</span>
+            <span class="px-2.5 py-0.5 rounded-full bg-green-50 text-green-600 text-xs font-semibold border border-green-100">Connected</span>
+          </div>
+          <div class="flex items-center justify-between py-2.5">
+            <span class="text-slate-500 text-xs">IDS Service</span>
+            <span id="sys-ids" class="px-2.5 py-0.5 rounded-full bg-green-50 text-green-600 text-xs font-semibold border border-green-100">Running</span>
+          </div>
+          <div class="flex items-center justify-between py-2.5">
+            <span class="text-slate-500 text-xs">Speed Detection</span>
+            <span class="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-600 text-xs font-semibold border border-blue-100">Isolation Forest</span>
+          </div>
+          <div class="flex items-center justify-between py-2.5">
+            <span class="text-slate-500 text-xs">GPS Detection</span>
+            <span class="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-600 text-xs font-semibold border border-blue-100">Haversine</span>
+          </div>
+          <div class="flex items-center justify-between py-2.5">
+            <span class="text-slate-500 text-xs">Traffic Detection</span>
+            <span class="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-600 text-xs font-semibold border border-blue-100">Dual-Verify</span>
+          </div>
+          <div class="flex items-center justify-between py-2.5">
+            <span class="text-slate-500 text-xs">Total Alerts</span>
+            <span id="alert-count" class="text-slate-800 text-xs font-extrabold">0</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Event Log + Attack Scenarios -->
+    <div class="grid grid-cols-2 gap-5">
+
+      <!-- Event Log -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+          <div>
+            <h2 class="text-slate-800 font-bold text-sm">Event Log</h2>
+            <p class="text-slate-400 text-xs mt-0.5">Timestamped system events</p>
+          </div>
+          <button onclick="clearLog()"
+                  class="text-xs text-slate-400 hover:text-blue-600 font-medium transition-colors">
+            Clear
+          </button>
+        </div>
+        <div id="log" class="h-80 overflow-y-auto px-4 py-3 divide-y divide-slate-50">
+          <div class="log-entry flex items-start gap-3 py-2">
+            <span id="init-time" class="text-slate-300 text-xs font-mono shrink-0 w-20"></span>
+            <span class="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0"></span>
+            <span class="text-slate-500 text-xs leading-relaxed">
+              Dashboard started. Waiting for car data…
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Attack Scenarios -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="px-5 py-4 border-b border-slate-100">
+          <h2 class="text-slate-800 font-bold text-sm">Attack Detection</h2>
+          <p class="text-slate-400 text-xs mt-0.5">3 active threat scenarios</p>
+        </div>
+        <div class="p-5 space-y-3">
+
+          <div id="sc-traffic" class="rounded-xl border border-slate-100 bg-slate-50 p-4 transition-all duration-300">
+            <div class="flex items-start justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-blue-600 text-sm font-extrabold shadow-sm">1</div>
+                <div>
+                  <p class="text-slate-700 text-sm font-semibold">Traffic Signal Spoof</p>
+                  <p class="text-slate-400 text-xs mt-0.5">Dual-verify: IR + MQTT agree check</p>
+                </div>
+              </div>
+              <span id="sc-traffic-badge" class="px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-500 text-xs font-semibold">Monitoring</span>
+            </div>
+            <div id="sc-traffic-detail" class="hidden mt-3 pt-3 border-t border-red-100">
+              <p class="text-red-600 text-xs font-medium">⚠ Mismatch between IR and MQTT signals</p>
+            </div>
+          </div>
+
+          <div id="sc-speed" class="rounded-xl border border-slate-100 bg-slate-50 p-4 transition-all duration-300">
+            <div class="flex items-start justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-blue-600 text-sm font-extrabold shadow-sm">2</div>
+                <div>
+                  <p class="text-slate-700 text-sm font-semibold">Speed Injection</p>
+                  <p class="text-slate-400 text-xs mt-0.5">Isolation Forest ML anomaly detection</p>
+                </div>
+              </div>
+              <span id="sc-speed-badge" class="px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-500 text-xs font-semibold">Monitoring</span>
+            </div>
+            <div id="sc-speed-detail" class="hidden mt-3 pt-3 border-t border-red-100">
+              <p id="sc-speed-text" class="text-red-600 text-xs font-medium"></p>
+            </div>
+          </div>
+
+          <div id="sc-gps" class="rounded-xl border border-slate-100 bg-slate-50 p-4 transition-all duration-300">
+            <div class="flex items-start justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-blue-600 text-sm font-extrabold shadow-sm">3</div>
+                <div>
+                  <p class="text-slate-700 text-sm font-semibold">GPS Spoofing</p>
+                  <p class="text-slate-400 text-xs mt-0.5">Golden route Haversine validation</p>
+                </div>
+              </div>
+              <span id="sc-gps-badge" class="px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-500 text-xs font-semibold">Monitoring</span>
+            </div>
+            <div id="sc-gps-detail" class="hidden mt-3 pt-3 border-t border-red-100">
+              <p id="sc-gps-text" class="text-red-600 text-xs font-medium"></p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- ── Footer ──────────────────────────────────────────────── -->
+  <footer class="max-w-screen-xl mx-auto px-6 py-5">
+    <div class="flex items-center justify-between border-t border-slate-200 pt-4">
+      <p class="text-slate-400 text-xs">Car IDS Monitoring Platform — ESP32 Autonomous Car</p>
+      <p class="text-slate-300 text-xs">Real-time intrusion detection via MQTT</p>
+    </div>
+  </footer>
+
+  <script>
+    const socket   = io();
+    const MAX_PTS  = 60;
+    let alertCount = 0;
+
+    document.getElementById('init-time').textContent = new Date().toLocaleTimeString();
+
+    // ── Chart ─────────────────────────────────────────────────
+    const labels    = Array(MAX_PTS).fill('');
+    const speedData = Array(MAX_PTS).fill(0);
+    const ctx       = document.getElementById('speedChart').getContext('2d');
+    const chart     = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Speed (PWM)',
+          data: speedData,
+          borderColor: '#3b82f6',
+          backgroundColor: (c) => {
+            const g = c.chart.ctx.createLinearGradient(0, 0, 0, 180);
+            g.addColorStop(0, 'rgba(59,130,246,0.18)');
+            g.addColorStop(1, 'rgba(59,130,246,0)');
+            return g;
+          },
+          tension: 0.4, fill: true, pointRadius: 0, borderWidth: 2,
+        }]
+      },
+      options: {
+        animation: false, responsive: true,
+        scales: {
+          y: { min: 0, max: 255,
+               ticks: { color: '#94a3b8', font: { size: 10 } },
+               grid: { color: '#f1f5f9' }, border: { display: false } },
+          x: { ticks: { display: false }, grid: { display: false }, border: { display: false } },
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#0f172a', titleColor: '#64748b',
+            bodyColor: '#e2e8f0', padding: 10, cornerRadius: 8,
+            callbacks: { title: () => 'Speed', label: (c) => ` PWM: ${c.parsed.y}` },
+          },
+        },
+      },
+    });
+
+    // ── Helpers ───────────────────────────────────────────────
+    function addLog(text, type) {
+      const cols = { alert:'bg-red-400', warn:'bg-amber-400', ok:'bg-green-400', info:'bg-blue-400' };
+      const txts = { alert:'text-red-700 font-medium', warn:'text-amber-700',
+                     ok:'text-green-700', info:'text-slate-500' };
+      const log  = document.getElementById('log');
+      const t    = new Date().toLocaleTimeString();
+      const div  = document.createElement('div');
+      div.className = 'log-entry flex items-start gap-3 py-2 border-b border-slate-50 last:border-0';
+      div.innerHTML = `
+        <span class="text-slate-300 text-xs font-mono shrink-0 w-20">${t}</span>
+        <span class="w-1.5 h-1.5 rounded-full ${cols[type]||cols.info} mt-1.5 shrink-0"></span>
+        <span class="${txts[type]||txts.info} text-xs leading-relaxed">${text}</span>`;
+      log.prepend(div);
+      if (log.children.length > 120) log.removeChild(log.lastChild);
+    }
+
+    function setStatus(intrusion) {
+      const s   = document.getElementById('car-status');
+      const dot = document.getElementById('status-dot');
+      const bar = document.getElementById('status-bar');
+      const nav = document.getElementById('nav-status');
+      if (intrusion) {
+        s.textContent = 'INTRUSION';   s.className = 'text-3xl font-extrabold text-red-500 tracking-tight';
+        dot.className = 'w-2.5 h-2.5 rounded-full bg-red-500 pulse-red';
+        bar.className = 'h-1 rounded-full bg-red-500 w-full transition-all duration-500';
+        nav.textContent = 'INTRUSION DETECTED';
+        nav.className = 'px-3 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-semibold tracking-wide';
+      } else {
+        s.textContent = 'SAFE';        s.className = 'text-3xl font-extrabold text-green-500 tracking-tight';
+        dot.className = 'w-2.5 h-2.5 rounded-full bg-green-500 pulse-green';
+        bar.className = 'h-1 rounded-full bg-green-500 w-full transition-all duration-500';
+        nav.textContent = 'SYSTEM SAFE';
+        nav.className = 'px-3 py-1 rounded-full bg-green-500/10 border border-green-500/30 text-green-400 text-xs font-semibold tracking-wide';
+      }
+    }
+
+    function flashScenario(id, detail) {
+      const card  = document.getElementById(id);
+      const badge = document.getElementById(id + '-badge');
+      const box   = document.getElementById(id + '-detail');
+      const txt   = document.getElementById(id + '-text');
+      card.className  = 'rounded-xl border border-red-200 bg-red-50 p-4 transition-all duration-300';
+      badge.className = 'px-2.5 py-0.5 rounded-full bg-red-100 border border-red-200 text-red-600 text-xs font-semibold';
+      badge.textContent = 'ALERT';
+      if (txt && detail) txt.textContent = detail;
+      if (box) box.classList.remove('hidden');
+      setTimeout(() => {
+        card.className  = 'rounded-xl border border-slate-100 bg-slate-50 p-4 transition-all duration-300';
+        badge.className = 'px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-500 text-xs font-semibold';
+        badge.textContent = 'Monitoring';
+        if (box) box.classList.add('hidden');
+      }, 7000);
+    }
+
+    function clearLog()    { document.getElementById('log').innerHTML = ''; }
+    function resetAlerts() { fetch('/reset', { method: 'POST' }); }
+
+    // ── Socket Events ─────────────────────────────────────────
+    socket.on('speed_update', (d) => {
+      document.getElementById('speed-val').textContent  = String(d.pwm).padStart(3, '0');
+      document.getElementById('speed-bar').style.width  = Math.round((d.pwm / 255) * 100) + '%';
+      speedData.push(d.pwm); speedData.shift();
+      labels.push('');       labels.shift();
+      chart.update();
+    });
+
+    socket.on('traffic_update', (d) => {
+      const val = document.getElementById('traffic-val');
+      const dot = document.getElementById('traffic-dot');
+      const lbl = document.getElementById('traffic-lbl');
+      val.textContent = d.signal;
+      if (d.signal === 'RED') {
+        val.className = 'text-3xl font-extrabold text-red-500 tracking-tight';
+        dot.className = 'w-3 h-3 rounded-full bg-red-500 transition-colors duration-300';
+        lbl.textContent = 'Stop — RED signal active';
+      } else {
+        val.className = 'text-3xl font-extrabold text-green-500 tracking-tight';
+        dot.className = 'w-3 h-3 rounded-full bg-green-500 transition-colors duration-300';
+        lbl.textContent = 'All clear — proceeding';
+      }
+      if (d.mismatch) {
+        addLog('Traffic signal MISMATCH — possible spoof', 'alert');
+        flashScenario('sc-traffic', '⚠ Mismatch between IR and MQTT signals');
+      }
+    });
+
+    socket.on('gps_update', (d) => {
+      addLog(`GPS: ${d.lat.toFixed(6)}, ${d.lon.toFixed(6)}`, 'info');
+    });
+
+    socket.on('alert', (a) => {
+      alertCount++;
+      document.getElementById('alert-count').textContent = alertCount;
+      setStatus(true);
+      document.getElementById('alert-banner').classList.remove('hidden');
+      if (a.type === 'speed_intrusion') {
+        document.getElementById('alert-banner-text').textContent = '🚨 Speed injection attack detected!';
+        addLog(`ALERT: Speed injection — PWM ${a.pwm} corrected to ${a.correct}`, 'alert');
+        flashScenario('sc-speed', `⚠ Anomalous PWM ${a.pwm} corrected to ${a.correct}`);
+      } else if (a.type === 'gps_spoof') {
+        const dev = a.deviation_m ? a.deviation_m.toFixed(0) : '?';
+        document.getElementById('alert-banner-text').textContent = '🚨 GPS spoofing attack detected!';
+        document.getElementById('route-val').textContent = 'LOCKED';
+        document.getElementById('route-val').className  = 'text-3xl font-extrabold text-red-500 tracking-tight';
+        document.getElementById('route-lbl').textContent = 'Route integrity compromised';
+        addLog(`ALERT: GPS spoof — ${dev}m deviation from route`, 'alert');
+        flashScenario('sc-gps', `⚠ Deviation ${dev}m from golden route`);
+      } else if (a.type === 'traffic_intrusion') {
+        document.getElementById('alert-banner-text').textContent = '🚨 Traffic signal spoofing detected!';
+        addLog(`ALERT: Traffic spoof — ${a.attack_type}`, 'alert');
+        flashScenario('sc-traffic', `⚠ ${a.attack_type} detected`);
+      } else if (a.type === 'hacker_activity') {
+        document.getElementById('alert-banner-text').textContent = `🚨 Hacker activity on ${a.topic}`;
+        addLog(`ALERT: Hacker activity on ${a.topic}`, 'alert');
+      }
+    });
+
+    socket.on('status_update', (d) => {
+      if (d.event === 'obstacle')
+        addLog(`Obstacle at ${d.dist_cm}cm — emergency stop`, 'warn');
+    });
+
+    socket.on('reset', () => {
+      setStatus(false);
+      document.getElementById('route-val').textContent  = 'OK';
+      document.getElementById('route-val').className    = 'text-3xl font-extrabold text-green-500 tracking-tight';
+      document.getElementById('route-lbl').textContent  = 'Golden route verified';
+      document.getElementById('alert-banner').classList.add('hidden');
+      alertCount = 0;
+      document.getElementById('alert-count').textContent = '0';
+      addLog('System reset — all alerts cleared', 'ok');
+    });
+  </script>
+</body>
+</html>
