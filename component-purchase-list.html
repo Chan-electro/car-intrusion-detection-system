@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Car IDS — Component Purchase List</title>
+<style>
+  @media print {
+    body { margin: 0; }
+    .no-print { display: none; }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f8fafc; color: #1e293b; padding: 40px; }
+  .page { max-width: 800px; margin: 0 auto; background: white; border-radius: 12px; padding: 40px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+  .header { border-bottom: 3px solid #3b82f6; padding-bottom: 20px; margin-bottom: 28px; }
+  .header h1 { font-size: 24px; color: #1e40af; margin-bottom: 4px; }
+  .header p { font-size: 13px; color: #64748b; }
+  .badge { display: inline-block; background: #dbeafe; color: #1e40af; border-radius: 20px; padding: 2px 12px; font-size: 12px; font-weight: 600; margin-top: 6px; }
+
+  h2 { font-size: 15px; font-weight: 700; margin: 28px 0 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  h2.buy  { color: #dc2626; border-left: 4px solid #dc2626; padding-left: 10px; }
+  h2.have { color: #16a34a; border-left: 4px solid #16a34a; padding-left: 10px; }
+  h2.note { color: #d97706; border-left: 4px solid #d97706; padding-left: 10px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 8px; }
+  thead tr { background: #f1f5f9; }
+  thead th { padding: 10px 12px; text-align: left; font-weight: 700; color: #475569; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0; }
+  tbody tr { border-bottom: 1px solid #f1f5f9; }
+  tbody tr:hover { background: #f8fafc; }
+  tbody td { padding: 10px 12px; vertical-align: top; }
+  .num { color: #94a3b8; font-weight: 700; width: 30px; }
+  .name { font-weight: 600; color: #1e293b; }
+  .spec { color: #64748b; font-size: 12px; margin-top: 2px; }
+  .qty { text-align: center; font-weight: 700; color: #3b82f6; }
+  .why { color: #64748b; font-size: 12px; }
+  .priority { text-align: center; }
+  .p1 { background: #fee2e2; color: #991b1b; border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 700; }
+  .p2 { background: #fef3c7; color: #92400e; border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 700; }
+  .p3 { background: #d1fae5; color: #065f46; border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 700; }
+
+  .check { color: #16a34a; font-weight: 700; text-align: center; font-size: 16px; }
+  .checkbox { width: 18px; height: 18px; border: 2px solid #cbd5e1; border-radius: 3px; display: inline-block; }
+
+  .tip { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 14px 16px; margin-top: 20px; font-size: 13px; color: #1e40af; }
+  .tip strong { display: block; margin-bottom: 4px; }
+
+  .footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #94a3b8; display: flex; justify-content: space-between; }
+
+  .print-btn { display: block; margin: 0 auto 24px; padding: 10px 28px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .print-btn:hover { background: #2563eb; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <button class="print-btn no-print" onclick="window.print()">Print / Save as PDF</button>
+
+  <div class="header">
+    <h1>Car IDS — Component Purchase List</h1>
+    <p>Intrusion Detection System for Automated Cars (AI + IoT)</p>
+    <span class="badge">Project: Harshith | Date: 2026-04-27 | Timeline: 3 Days</span>
+  </div>
+
+  <!-- BUY LIST -->
+  <h2 class="buy">Must Purchase</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Component</th>
+        <th style="text-align:center">Qty</th>
+        <th>Purpose</th>
+        <th style="text-align:center">Priority</th>
+        <th style="text-align:center">Bought</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="num">1</td>
+        <td>
+          <div class="name">2WD Robot Car Chassis Kit</div>
+          <div class="spec">With wheels, motor mounts, screws, acrylic/metal base</div>
+        </td>
+        <td class="qty">1</td>
+        <td class="why">Physical car frame — motors mount here</td>
+        <td class="priority"><span class="p1">P1</span></td>
+        <td style="text-align:center"><span class="checkbox"></span></td>
+      </tr>
+      <tr>
+        <td class="num">2</td>
+        <td>
+          <div class="name">IR LED Transmitter (940nm)</div>
+          <div class="spec">+ 100Ω resistor. Standard through-hole IR LED.</div>
+        </td>
+        <td class="qty">2</td>
+        <td class="why">Traffic signal emitter — sends IR pulse on RED</td>
+        <td class="priority"><span class="p1">P1</span></td>
+        <td style="text-align:center"><span class="checkbox"></span></td>
+      </tr>
+      <tr>
+        <td class="num">3</td>
+        <td>
+          <div class="name">ESP32 Dev Board</div>
+          <div class="spec">ESP32-WROOM-32 or ESP32-DevKitC. 38-pin preferred.</div>
+        </td>
+        <td class="qty">1</td>
+        <td class="why">Second ESP32 as traffic signal controller</td>
+        <td class="priority"><span class="p1">P1</span></td>
+        <td style="text-align:center"><span class="checkbox"></span></td>
+      </tr>
+      <tr>
+        <td class="num">4</td>
+        <td>
+          <div class="name">7.4V LiPo Battery (1000–2000 mAh)</div>
+          <div class="spec">2S LiPo with JST or XT30 connector + compatible charger</div>
+        </td>
+        <td class="qty">1</td>
+        <td class="why">Main power — drives motors + ESP32 via buck converter</td>
+        <td class="priority"><span class="p1">P1</span></td>
+        <td style="text-align:center"><span class="checkbox"></span></td>
+      </tr>
+      <tr>
+        <td class="num">5</td>
+        <td>
+          <div class="name">Rotary Encoder Module (LM393)</div>
+          <div class="spec">Hall effect or optical disk type — motor shaft mount</div>
+        </td>
+        <td class="qty">2</td>
+        <td class="why">Accurate real-time speed measurement per motor</td>
+        <td class="priority"><span class="p2">P2</span></td>
+        <td style="text-align:center"><span class="checkbox"></span></td>
+      </tr>
+      <tr>
+        <td class="num">6</td>
+        <td>
+          <div class="name">0.96" OLED Display (SSD1306, I2C)</div>
+          <div class="spec">128×64 px, I2C address 0x3C, 3.3V compatible</div>
+        </td>
+        <td class="qty">1</td>
+        <td class="why">Shows SAFE / INTRUSION on car — strong demo visual</td>
+        <td class="priority"><span class="p2">P2</span></td>
+        <td style="text-align:center"><span class="checkbox"></span></td>
+      </tr>
+      <tr>
+        <td class="num">7</td>
+        <td>
+          <div class="name">Jumper Wire Pack</div>
+          <div class="spec">Male-Male, Male-Female, Female-Female, 20cm each</div>
+        </td>
+        <td class="qty">1 pack</td>
+        <td class="why">All wiring between ESP32, sensors, motor driver</td>
+        <td class="priority"><span class="p2">P2</span></td>
+        <td style="text-align:center"><span class="checkbox"></span></td>
+      </tr>
+      <tr>
+        <td class="num">8</td>
+        <td>
+          <div class="name">Half-size Breadboard (400 tie points)</div>
+          <div class="spec">Standard 400-point solderless breadboard</div>
+        </td>
+        <td class="qty">2</td>
+        <td class="why">Prototyping connections — one per ESP32</td>
+        <td class="priority"><span class="p2">P2</span></td>
+        <td style="text-align:center"><span class="checkbox"></span></td>
+      </tr>
+      <tr>
+        <td class="num">9</td>
+        <td>
+          <div class="name">DC Barrel Jack / XT30 Connector</div>
+          <div class="spec">Female XT30 or 5.5×2.1mm DC barrel jack panel mount</div>
+        </td>
+        <td class="qty">1</td>
+        <td class="why">Clean battery connection to buck converter input</td>
+        <td class="priority"><span class="p3">P3</span></td>
+        <td style="text-align:center"><span class="checkbox"></span></td>
+      </tr>
+      <tr>
+        <td class="num">10</td>
+        <td>
+          <div class="name">Buzzer (Active, 5V)</div>
+          <div class="spec">Active piezo buzzer, 5V, through-hole</div>
+        </td>
+        <td class="qty">1</td>
+        <td class="why">Audible alert when intrusion detected — demo impact</td>
+        <td class="priority"><span class="p3">P3</span></td>
+        <td style="text-align:center"><span class="checkbox"></span></td>
+      </tr>
+      <tr>
+        <td class="num">11</td>
+        <td>
+          <div class="name">Red + Green LED (5mm)</div>
+          <div class="spec">2× red, 2× green, through-hole, with 220Ω resistors</div>
+        </td>
+        <td class="qty">1 pack</td>
+        <td class="why">Traffic signal visual indicator on signal controller unit</td>
+        <td class="priority"><span class="p3">P3</span></td>
+        <td style="text-align:center"><span class="checkbox"></span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- HAVE LIST -->
+  <h2 class="have">Already Have — Verify Before Shopping</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Component</th>
+        <th style="text-align:center">Qty Needed</th>
+        <th>Role in Project</th>
+        <th style="text-align:center">Verified</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="num">—</td>
+        <td><div class="name">ESP32 Dev Board</div><div class="spec">Any ESP32 variant</div></td>
+        <td class="qty">1</td>
+        <td class="why">Main car controller</td>
+        <td class="check">✓</td>
+      </tr>
+      <tr>
+        <td class="num">—</td>
+        <td><div class="name">IR Receiver Module</div><div class="spec">TSOP1738 or equivalent 38kHz demodulator</div></td>
+        <td class="qty">1</td>
+        <td class="why">Detects traffic signal on car</td>
+        <td class="check">✓</td>
+      </tr>
+      <tr>
+        <td class="num">—</td>
+        <td><div class="name">DC Motors</div><div class="spec">3V–6V DC geared motors</div></td>
+        <td class="qty">2</td>
+        <td class="why">Drive wheels</td>
+        <td class="check">✓</td>
+      </tr>
+      <tr>
+        <td class="num">—</td>
+        <td><div class="name">L298N Motor Driver</div><div class="spec">Dual H-bridge, handles 2 motors</div></td>
+        <td class="qty">1</td>
+        <td class="why">PWM motor speed control</td>
+        <td class="check">✓</td>
+      </tr>
+      <tr>
+        <td class="num">—</td>
+        <td><div class="name">Buck Converter</div><div class="spec">Adjustable DC-DC step-down (LM2596 or similar)</div></td>
+        <td class="qty">1</td>
+        <td class="why">Regulate 7.4V → 5V for ESP32 + logic</td>
+        <td class="check">✓</td>
+      </tr>
+      <tr>
+        <td class="num">—</td>
+        <td><div class="name">HC-SR04 Ultrasonic Sensor</div><div class="spec">5V, 2cm–400cm range</div></td>
+        <td class="qty">1</td>
+        <td class="why">Emergency obstacle stop (&lt;15cm)</td>
+        <td class="check">✓</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- SOFTWARE NOTE -->
+  <h2 class="note">Software Setup (No Purchase Needed)</h2>
+  <table>
+    <thead>
+      <tr><th>Software</th><th>Install Command</th><th>Purpose</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="name">Mosquitto MQTT Broker</td>
+        <td><code style="background:#f1f5f9;padding:2px 6px;border-radius:3px;font-size:12px">brew install mosquitto</code></td>
+        <td class="why">Message broker on laptop</td>
+      </tr>
+      <tr>
+        <td class="name">Python 3.11+</td>
+        <td><code style="background:#f1f5f9;padding:2px 6px;border-radius:3px;font-size:12px">brew install python</code></td>
+        <td class="why">IDS service + dashboard</td>
+      </tr>
+      <tr>
+        <td class="name">Arduino IDE 2.x</td>
+        <td>arduino.cc/en/software</td>
+        <td class="why">Flash ESP32 firmware</td>
+      </tr>
+      <tr>
+        <td class="name">MQTT Explorer</td>
+        <td>mqtt-explorer.com</td>
+        <td class="why">Debug MQTT messages visually</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- TIP -->
+  <div class="tip">
+    <strong>Arduino Libraries to Install (via Library Manager in Arduino IDE)</strong>
+    PubSubClient — by Nick O'Leary &nbsp;|&nbsp;
+    NewPing — by Tim Eckel &nbsp;|&nbsp;
+    IRremote — by Armin Joachimsmeyer (v4.x) &nbsp;|&nbsp;
+    Adafruit SSD1306 — by Adafruit (for OLED)
+  </div>
+
+  <div class="footer">
+    <span>Car IDS Project — Harshith</span>
+    <span>Generated: 2026-04-27</span>
+  </div>
+
+</div>
+</body>
+</html>

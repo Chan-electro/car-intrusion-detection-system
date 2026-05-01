@@ -1,0 +1,77 @@
+<h2>System Architecture — Overall View</h2>
+<p class="subtitle">Section 1 of 5 — Three entities, three attack surfaces, one IDS</p>
+
+<div style="font-family:monospace;font-size:13px;line-height:1.7;background:#0f172a;color:#e2e8f0;padding:24px;border-radius:8px;overflow-x:auto">
+<pre style="margin:0">
+┌─────────────────────────────────────────────────────────────────────┐
+│                         MONITORING PLATFORM (Laptop)                │
+│                                                                     │
+│  ┌─────────────────┐   ┌──────────────────┐   ┌─────────────────┐  │
+│  │  Mosquitto MQTT │   │  Python IDS      │   │  Flask Dashboard│  │
+│  │  Broker         │◄──│  Service         │──►│  (Web UI)       │  │
+│  │  :1883          │   │  - Speed ML      │   │  :5000          │  │
+│  └────────┬────────┘   │  - GPS Checker   │   └─────────────────┘  │
+│           │            │  - IR Verifier   │                         │
+│           │            └──────────────────┘                         │
+└───────────┼─────────────────────────────────────────────────────────┘
+            │ WiFi / MQTT
+     ┌──────┴──────────────────────────────────────────────┐
+     │                                                      │
+     ▼                                                      ▼
+┌────────────────────────┐              ┌───────────────────────────┐
+│   USER CAR (ESP32)     │              │   HACKER (ESP32 / Python) │
+│                        │              │                           │
+│  ├─ IR Receiver        │              │  Publishes malicious data │
+│  ├─ DC Motors x2       │              │  to MQTT topics:          │
+│  ├─ Motor Driver L298N │              │  • hacker/speed           │
+│  ├─ Ultrasonic HC-SR04 │              │  • hacker/gps             │
+│  ├─ Buck Converter     │              │  • hacker/ir (blocked)    │
+│  └─ Encoder (speed)    │              │                           │
+│                        │              │  ⚠ Cannot spoof IR signal │
+│  Publishes to:         │              │  (hardware-level defense) │
+│  • car/speed           │              └───────────────────────────┘
+│  • car/gps             │
+│  • car/ir              │
+│  • car/status          │
+│                        │
+│  Subscribes to:        │
+│  • car/command         │
+│    (IDS corrections)   │
+└────────────────────────┘
+
+MQTT TOPICS MAP:
+  car/speed      → ESP32 publishes speed (PWM duty %)  → IDS reads
+  car/gps        → ESP32 publishes lat/lon every 5s    → IDS reads
+  car/ir         → ESP32 publishes IR state            → Dashboard
+  hacker/speed   → Hacker injects fake speed           → IDS detects
+  hacker/gps     → Hacker injects wrong coordinates    → IDS detects
+  ids/alert      → IDS publishes intrusion alerts      → Dashboard
+  car/command    → IDS sends speed correction          → ESP32 acts
+</pre>
+</div>
+
+<div style="margin-top:20px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+
+  <div style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);border-radius:6px;padding:14px">
+    <div class="label">Scenario 1</div>
+    <h3 style="color:#60a5fa;margin:4px 0">🚦 Traffic Signal</h3>
+    <p style="font-size:13px;margin:0">IR LED → IR receiver → hardware interrupt stops motor. Hacker cannot override — no software path.</p>
+  </div>
+
+  <div style="background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.3);border-radius:6px;padding:14px">
+    <div class="label">Scenario 2</div>
+    <h3 style="color:#c084fc;margin:4px 0">⚡ Speed IDS</h3>
+    <p style="font-size:13px;margin:0">Hacker publishes speed spike → Isolation Forest detects anomaly → IDS corrects via car/command.</p>
+  </div>
+
+  <div style="background:rgba(234,179,8,0.1);border:1px solid rgba(234,179,8,0.3);border-radius:6px;padding:14px">
+    <div class="label">Scenario 3</div>
+    <h3 style="color:#facc15;margin:4px 0">📍 GPS IDS</h3>
+    <p style="font-size:13px;margin:0">Hacker publishes fake GPS → IDS compares vs golden route every 5s → deviation alert + lock.</p>
+  </div>
+
+</div>
+
+<div style="margin-top:16px;padding:12px;background:rgba(248,113,113,0.08);border-left:3px solid #f87171;border-radius:4px;font-size:13px">
+  <strong>Does this overall architecture look right?</strong> Reply in terminal — confirm or flag any changes before we go deeper into each layer.
+</div>

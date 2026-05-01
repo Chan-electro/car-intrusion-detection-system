@@ -78,11 +78,16 @@ int gpsIndex      = 0;
 bool routeReceived = false;
 
 // Timing
-unsigned long lastSpeedPub  = 0;
-unsigned long lastGpsPub    = 0;
-unsigned long lastStatusPub = 0;
-unsigned long lastIrPub     = 0;
-unsigned long lastOledUpd   = 0;
+unsigned long lastSpeedPub      = 0;
+unsigned long lastGpsPub        = 0;
+unsigned long lastStatusPub     = 0;
+unsigned long lastIrPub         = 0;
+unsigned long lastOledUpd       = 0;
+unsigned long lastReconnectAt   = 0;   // non-blocking MQTT reconnect
+unsigned long obstacleStopAt    = 0;   // non-blocking obstacle pause
+bool          obstacleActive    = false;
+unsigned long buzzerOffAt       = 0;   // non-blocking buzzer
+bool          buzzerOn          = false;
 
 WiFiClient   wifiClient;
 PubSubClient mqtt(wifiClient);
@@ -180,11 +185,11 @@ void updateOled(bool intrusion) {
   updateOledContinuous();
 }
 
-// ── Buzzer Alert ─────────────────────────────────────────────
+// ── Buzzer Alert (non-blocking) ───────────────────────────────
 void buzzAlert(int duration_ms) {
   digitalWrite(BUZZER_PIN, HIGH);
-  delay(duration_ms);
-  digitalWrite(BUZZER_PIN, LOW);
+  buzzerOffAt = millis() + duration_ms;
+  buzzerOn    = true;
 }
 
 // ── Publish Functions ────────────────────────────────────────
@@ -248,21 +253,22 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   }
 }
 
-// ── MQTT Reconnect ───────────────────────────────────────────
+// ── MQTT Reconnect (non-blocking, retries every 5s) ──────────
 void reconnectMqtt() {
-  while (!mqtt.connected()) {
-    Serial.print("MQTT connecting...");
-    if (mqtt.connect("car_esp32")) {
-      mqtt.subscribe("traffic/signal");
-      mqtt.subscribe("car/command");
-      mqtt.subscribe("car/route");
-      mqtt.subscribe("ids/heartbeat");
-      Serial.println(" connected + subscribed");
-    } else {
-      Serial.print(" failed, rc=");
-      Serial.println(mqtt.state());
-      delay(2000);
-    }
+  unsigned long now = millis();
+  if (now - lastReconnectAt < 5000) return;   // don't hammer the broker
+  lastReconnectAt = now;
+
+  Serial.print("MQTT connecting...");
+  if (mqtt.connect("car_esp32")) {
+    mqtt.subscribe("traffic/signal");
+    mqtt.subscribe("car/command");
+    mqtt.subscribe("car/route");
+    mqtt.subscribe("ids/heartbeat");
+    Serial.println(" connected + subscribed");
+  } else {
+    Serial.print(" failed, rc=");
+    Serial.println(mqtt.state());
   }
 }
 
@@ -320,6 +326,8 @@ void setup() {
   mqtt.setServer(MQTT_BROKER, MQTT_PORT);
   mqtt.setCallback(mqttCallback);
   mqtt.setBufferSize(512);
+  mqtt.setKeepAlive(60);        // 60s keepalive — tolerates brief loop delays
+  mqtt.setSocketTimeout(10);    // 10s socket timeout
   reconnectMqtt();
 
   // Start moving
@@ -337,10 +345,16 @@ void setup() {
 
 // ── Loop ─────────────────────────────────────────────────────
 void loop() {
-  if (!mqtt.connected()) reconnectMqtt();
-  mqtt.loop();
+  mqtt.loop();                              // keep connection alive first
+  if (!mqtt.connected()) reconnectMqtt();  // non-blocking retry every 5s
 
   unsigned long now = millis();
+
+  // ── Buzzer tick (non-blocking) ──
+  if (buzzerOn && now >= buzzerOffAt) {
+    digitalWrite(BUZZER_PIN, LOW);
+    buzzerOn = false;
+  }
 
   // ── Heartbeat watchdog: if no IDS heartbeat for 10s, force stop ──
   if (idsOnline && (now - lastHeartbeat > 10000)) {
@@ -351,17 +365,20 @@ void loop() {
     Serial.println("WARNING: IDS heartbeat lost — STOPPED");
   }
 
-  // ── Ultrasonic emergency stop ──
-  int dist = sonar.ping_cm();
-  if (dist > 0 && dist < 15) {
-    setSpeed(0);
-    char statusBuf[64];
-    snprintf(statusBuf, sizeof(statusBuf), "{\"event\":\"obstacle\",\"dist_cm\":%d}", dist);
-    mqtt.publish("car/status", statusBuf);
-    delay(1500);
-    if (!irSignalDetected && !mqttTrafficRed) {
-      setSpeed(lastSafePwm);
+  // ── Ultrasonic emergency stop (non-blocking) ──
+  if (!obstacleActive) {
+    int dist = sonar.ping_cm();
+    if (dist > 0 && dist < 15) {
+      setSpeed(0);
+      char statusBuf[64];
+      snprintf(statusBuf, sizeof(statusBuf), "{\"event\":\"obstacle\",\"dist_cm\":%d}", dist);
+      mqtt.publish("car/status", statusBuf);
+      obstacleActive = true;
+      obstacleStopAt = now + 1500;   // resume after 1.5s (non-blocking)
     }
+  } else if (now >= obstacleStopAt) {
+    obstacleActive = false;
+    if (!mqttTrafficRed && idsOnline) setSpeed(lastSafePwm);
   }
 
   // ── Rotary encoder: adjust target speed ──
@@ -389,7 +406,7 @@ void loop() {
   // ── Traffic signal: stop if MQTT says RED ──
   if (mqttTrafficRed) {
     setSpeed(0);
-  } else if (currentPwm == 0 && !mqttTrafficRed && idsOnline) {
+  } else if (currentPwm == 0 && !mqttTrafficRed && idsOnline && !obstacleActive) {
     setSpeed(lastSafePwm);
   }
 
