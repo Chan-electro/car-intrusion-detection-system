@@ -53,3 +53,17 @@ build/
 
 # Node (if frontend tooling added later)
 node_modules/
+
+# Tool config / AI assistant directories
+.claude/
+.superpowers/
+
+# Generated docs / superpowers output
+docs/superpowers/
+
+# One-off personal / non-project files
+RESUME.md
+component-purchase-list.html
+2026-04-27-car-ids-design.md
+*.pdf
+ChatGPT*.png

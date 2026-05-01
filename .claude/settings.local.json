@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(mkdir -p \"/Users/joyrajroy/Chandan/Harshith Project\")",
-      "Bash(bash \"/Users/joyrajroy/.claude/plugins/cache/claude-plugins-official/superpowers/5.0.7/skills/brainstorming/scripts/start-server.sh\" --project-dir \"/Users/joyrajroy/Chandan/Harshith Project\")",
-      "Bash(open *)"
-    ]
-  }
-}
